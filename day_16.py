@@ -1,42 +1,41 @@
-import operator
 from functools import partial
+from itertools import repeat
 from typing import List
-from itertools import cycle, repeat
-from more_itertools import flatten
-from toolz import drop, pipe, take
-import numpy as np
 
-from day_12 import lcm
+from segment_tree import SegmentTree
+from toolz import pipe
+
+phase = 1
 
 
-def fft_phase(input_signal: List[int], repetitions: int = 1, base_pattern=None) -> List[int]:
-    if base_pattern is None:
-        base_pattern = [0, 1, 0, -1]
-
-    print('phase')
-    res = []
+def fft_phase(input_signal: List[int], offset: int = 0) -> List[int]:
+    global phase
+    print('phase ' + str(phase))
+    phase += 1
+    pattern = (0, 1, 0, -1)
     n = len(input_signal)
-    total_n = n * repetitions
-    repeating_pattern = list(base_pattern)
-    for i in range(total_n):
-        pat_len = len(repeating_pattern)
-        cycle_len = min(total_n, lcm(n, pat_len))
-        multiples = total_n // cycle_len
 
+    res = []
+    if offset > 0:
+        res.extend([0] * offset)
+
+    tree = SegmentTree(input_signal[offset:])
+    for i in range(offset, n):
         sum_prod = 0
-        d = i
-        p = 1 + i
-        while d < cycle_len:
-            sum_prod += input_signal[d % n] * repeating_pattern[p % pat_len]
-            d += 1
+        d, p, pat_repeat = 0, 0, i
+        while d < n:
+            pat_digit = pattern[p % 4]
+            if pat_digit != 0:
+                mult = 1 if pat_digit > 0 else -1
+                digit_sum = tree.query(d - offset, min(d + pat_repeat, n) - offset - 1, "sum")
+                # digit_sum = sum(input_signal[d - offset: min(d + pat_repeat, n) - offset])
+                sum_prod += digit_sum * mult
+            d += pat_repeat
             p += 1
-
-        sum_prod *= multiples
+            pat_repeat = i + 1
 
         digit = abs(sum_prod) % 10
-
         res.append(digit)
-        repeating_pattern = list(flatten([[d] * (i + 2) for d in base_pattern]))
 
     return res
 
@@ -52,10 +51,10 @@ def problem1():
         return fft(input_signal, 100)[:8]
 
 
-def fft2(input_signal: str, phases: int = 100) -> str:
+def fft2(input_signal: str) -> str:
     offset = int(input_signal[:7])
-    input_signal = [int(c) for c in input_signal]
-    res = pipe(input_signal, *repeat(partial(fft_phase, repetitions=10000), phases))
+    input_signal = [int(c) for c in input_signal] * 10000
+    res = pipe(input_signal, *repeat(partial(fft_phase, offset=offset), 100))
     return ''.join(str(d) for d in res[offset:offset + 8])
 
 
@@ -67,5 +66,7 @@ def problem2():
 
 if __name__ == '__main__':
     # print(problem1())
-    # print(problem2())
-    print(fft2('03036732577212944063491565474664'))
+    print(problem2())
+    # print(fft2('03036732577212944063491565474664'))
+    # print(fft2('02935109699940807407585447034323'))
+    # print(fft2('03081770884921959731165446850517'))
