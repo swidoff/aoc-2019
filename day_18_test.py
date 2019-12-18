@@ -48,4 +48,52 @@ def test_shortest_path():
 ###g#h#i################
 ########################
 """
-    # assert (shortest_path(board_from_img(img)).steps == 81)
+    assert (shortest_path(board_from_img(img)).steps == 81)
+
+
+def test_multiple_robots():
+    img = """
+#######
+#a.#Cd#
+##@#@##
+#######
+##@#@##
+#cB#Ab#
+#######
+"""
+    assert (shortest_path(board_from_img(img)).steps == 8)
+
+    img = """
+###############
+#d.ABC.#.....a#
+######@#@######
+###############
+######@#@######
+#b.....#.....c#
+###############
+"""
+    assert (shortest_path(board_from_img(img)).steps == 24)
+
+    img = """
+#############
+#DcBa.#.GhKl#
+#.###@#@#I###
+#e#d#####j#k#
+###C#@#@###J#
+#fEbA.#.FgHi#
+#############
+"""
+    assert (shortest_path(board_from_img(img)).steps == 32)
+
+    img = """
+#############
+#g#f.D#..h#l#
+#F###e#E###.#
+#dCba@#@BcIJ#
+#############
+#nK.L@#@G...#
+#M###N#H###.#
+#o#m..#i#jk.#
+#############
+"""
+    assert (shortest_path(board_from_img(img)).steps == 72)
