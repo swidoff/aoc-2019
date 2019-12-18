@@ -2,6 +2,8 @@ from collections import deque
 from enum import Enum
 from typing import List, Tuple
 
+from more_itertools import flatten
+
 from day_11 import run_program_coroutine, program_in_file
 
 
@@ -83,47 +85,27 @@ class Direction(Enum):
 
 def cover_scaffolds(img: str) -> List[str]:
     mat = img.split('\n')
-    remaining, coord = find_scaffolds_and_robot(mat)
+    scaffolds, coord = find_scaffolds_and_robot(mat)
+    remaining = set(scaffolds)
 
     path = []
-    stack = deque()
     direction = Direction.UP
-    backtracking = False
     print(print_map(img, remaining, coord, direction))
 
     while len(remaining) > 0:
-        if direction.move(coord) in remaining:
-            new_coord = direction.move(coord)
+        if direction.move(coord) in scaffolds:
+            coord = direction.move(coord)
+            if coord in remaining:
+                remaining.remove(coord)
             path.append('1')
-            stack.append(coord)
-            coord = new_coord
-            remaining.remove(new_coord)
-            backtracking = False
-        elif direction.rotate_left().move(coord) in remaining:
+        elif direction.rotate_left().move(coord) in scaffolds:
             direction = direction.rotate_left()
             path.append('L')
-            stack.append(coord)
-            backtracking = False
-        elif direction.rotate_right().move(coord) in remaining:
+        elif direction.rotate_right().move(coord) in scaffolds:
             direction = direction.rotate_right()
             path.append('R')
-            stack.append(coord)
-            backtracking = False
         else:
-            if not backtracking:
-                direction = direction.rotate_left().rotate_left()
-                path.extend(['L', 'L'])
-                backtracking = True
-            new_coord = stack.pop()
-            if direction.move(coord) == new_coord:
-                path.append('1')
-            elif direction.rotate_right().move(coord) == new_coord:
-                path.append('R')
-                direction = direction.rotate_right()
-            else:
-                path.append('L')
-                direction = direction.rotate_left()
-            coord = new_coord
+            raise ValueError("Backtracking required!")
         print(print_map(img, remaining, coord, direction))
     return path
 
@@ -140,7 +122,7 @@ def find_scaffolds_and_robot(mat):
     return res, coord
 
 
-def print_map(img, scaffolds, robot_coord, direction):
+def print_map(img, remaining, robot_coord, direction):
     mat = img.split('\n')
 
     def map_gen():
@@ -148,7 +130,7 @@ def print_map(img, scaffolds, robot_coord, direction):
             for c in range(len(mat[r])):
                 if (r, c) == robot_coord:
                     yield direction.icon()
-                elif mat[r][c] == '#' and (r, c) not in scaffolds:
+                elif mat[r][c] == '#' and (r, c) not in remaining:
                     yield '*'
                 elif mat[r][c] == '^':
                     yield '*'
@@ -159,12 +141,87 @@ def print_map(img, scaffolds, robot_coord, direction):
     return "".join(map_gen())
 
 
-def problem2():
+def condense_path(path: List[str]):
+    count = 0
+    for c in path:
+        if c == 'L' or c == 'R':
+            if count > 0:
+                yield str(count)
+                count = 0
+            yield c
+        else:
+            count += 1
+
+    if count > 0:
+        yield count
+
+
+def move_robot(program: List[int], main: str, functions: List[str]) -> int:
+    output = []
+    last = [0]
+    program[0] = 2
+
+    def record_output():
+        while True:
+            o = (yield)
+            if chr(o) == '\n':
+                print(''.join(output))
+                output.clear()
+            else:
+                output.append(chr(o))
+                last[0] = o
+
+    recorder = record_output()
+    next(recorder)
+
+    runner = run_program_coroutine(program, recorder)
+    next(runner)
+
+    def send_code(line):
+        for c in line:
+            runner.send(ord(c))
+        runner.send(10)
+
+    try:
+        send_code(main)
+        for f in functions:
+            send_code(f)
+        send_code('n')
+    except StopIteration:
+        pass
+
+    return last[0]
+
+
+def problem2_part1():
     program = list(program_in_file('day_17_input.txt'))
     img = draw_map(program)
-    path = cover_scaffolds(img)
-    # program[0] = 2
+    path = list(condense_path(cover_scaffolds(img)))
     return path
+
+
+def problem2_part2():
+    """
+    Optimal path:
+    A: 'L', '6', 'R', '8', 'L', '4', 'R', '8', 'L', '12',
+    B: 'L', '12', 'R', '10', 'L', '4',
+    B: 'L', '12', 'R', '10', 'L', '4',
+    C: 'L', '12', 'L', '6', 'L', '4', 'L', '4',
+    B: 'L', '12', 'R', '10', 'L', '4',
+    C:'L', '12', 'L', '6', 'L', '4', 'L', '4',
+    B: 'L', '12', 'R', '10', 'L', '4',
+    C: 'L', '12', 'L', '6', 'L', '4', 'L', '4',
+    A: 'L', '6', 'R', '8', 'L', '4', 'R', '8', 'L', '12',
+    A: 'L', '6', 'R', '8', 'L', '4', 'R', '8', 'L', '12'
+    """
+    program = list(program_in_file('day_17_input.txt'))
+    main = 'A,B,B,C,B,C,B,C,A,A'
+    functions = [
+        'L,6,R,8,L,4,R,8,L,12',
+        'L,12,R,10,L,4',
+        'L,12,L,6,L,4,L,4'
+    ]
+    return move_robot(program, main, functions)
 
 
 if __name__ == '__main__':
@@ -198,5 +255,6 @@ if __name__ == '__main__':
 ....#####......
 """
     # print(cover_scaffolds(img1.strip()))
-    # print(cover_scaffolds(img2.strip()))
-    print(problem2())
+    # print(list(condense_path(cover_scaffolds(img2.strip()))))
+    # print(problem2_part1())
+    print(problem2_part2())
