@@ -1,8 +1,5 @@
-from collections import deque
 from enum import Enum
 from typing import List, Tuple
-
-from more_itertools import flatten
 
 from day_11 import run_program_coroutine, program_in_file
 
