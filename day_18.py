@@ -1,6 +1,7 @@
 from collections import deque, defaultdict
 from dataclasses import dataclass, field
 from typing import List, Tuple, Set, Dict, FrozenSet
+import heapq
 
 
 class Board:
@@ -53,16 +54,15 @@ def to_graphs(board: Board) -> List[Dict[str, List[Edge]]]:
                 new_sym = board.mat[new_loc[0]][new_loc[1]]
                 if new_sym == '#':
                     continue
+                elif sym != new_sym and (new_sym in board.keys):
+                    res[sym].append(Edge(new_sym, frozenset(doors), steps + 1))
+
+                    if new_sym not in res:
+                        queue.append((new_sym, new_loc, (), 0))
+                elif new_sym in board.doors:
+                    new_doors = doors + (new_sym,)
+                    queue.append((sym, new_loc, new_doors, steps + 1))
                 else:
-                    if sym != new_sym and new_sym in board.keys:
-                        edge = Edge(new_sym, frozenset(doors), steps + 1)
-                        res[sym].append(edge)
-
-                        if new_sym not in res:
-                            queue.append((new_sym, new_loc, (), 0))
-
-                    if new_sym in board.doors:
-                        doors = doors + (new_sym,)
                     queue.append((sym, new_loc, doors, steps + 1))
 
         return res
@@ -100,7 +100,7 @@ def shortest_path(board: Board) -> State:
             elif best is None or state.steps < best.steps:
                 for i, node in enumerate(state.robots):
                     for edge in graphs[i][node]:
-                        if edge.key not in state.collected and all(d.lower() in state.collected for d in edge.doors):
+                        if all(d.lower() in state.collected for d in edge.doors):
                             new_robots = state.robots[:i] + (edge.key,) + state.robots[i + 1:]
                             new_collected = state.collected | {edge.key}
                             new_steps = state.steps + edge.steps
@@ -128,7 +128,7 @@ def problem2():
 
     initial_board = board_from_img(img)
 
-    (r, c), = initial_board.initial_state.robots
+    r, c = initial_board.start[0]
     mat = initial_board.mat
     mat = [[c for c in row] for row in mat]
     mat[r - 1][c - 1] = "@"
@@ -147,5 +147,5 @@ def problem2():
 
 
 if __name__ == '__main__':
-    print(problem1())
-    # print(problem2())
+    # print(problem1())
+    print(problem2())
