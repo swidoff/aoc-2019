@@ -1,32 +1,20 @@
-from collections import deque
+from collections import deque, defaultdict
 from dataclasses import dataclass, field
 from typing import List, Tuple, Set, Dict, FrozenSet
-
-
-@dataclass(frozen=True)
-class State:
-    robots: Tuple[Tuple[int, int]]
-    keys: FrozenSet[str]
-    doors: FrozenSet[str]
-    steps: int = 0
-    collected: Tuple[str, ...] = ()
-
-    def path_key(self):
-        return self.robots, self.keys
 
 
 class Board:
     def __init__(self, mat: List[str]):
         self.mat = mat
 
-        loc = []
+        start = []
         self.keys = {}
         self.doors = {}
         self.walls = set()
         for r, row in enumerate(self.mat):
             for c, cell in enumerate(self.mat[r]):
                 if cell == '@':
-                    loc.append((r, c))
+                    start.append((r, c))
                 elif 'a' <= cell <= 'z':
                     self.keys[cell] = (r, c)
                 elif 'A' <= cell <= 'Z':
@@ -34,60 +22,90 @@ class Board:
                 elif cell == '#':
                     self.walls.add((r, c))
 
-        self.initial_state = State(tuple(loc), frozenset(self.keys.keys()), frozenset(self.doors.keys()))
+        self.start = tuple(start)
 
     def on_board(self, loc: Tuple[int, int]) -> bool:
         r, c = loc
         return 0 <= r < len(self.mat) and 0 <= c < len(self.mat[r])
 
 
-def next_states(board: Board, state: State, robot_index: int) -> List[State]:
-    queue = deque([(state.robots[robot_index], 0)])
-    res = []
-    seen = {state.robots[robot_index]}
-    while len(queue) > 0:
-        (r, c), steps = queue.popleft()
-        for new_loc in [(r - 1, c), (r + 1, c), (r, c - 1), (r, c + 1)]:
-            char = board.mat[new_loc[0]][new_loc[1]]
-            if board.on_board(new_loc) and \
-                    new_loc not in seen and \
-                    new_loc not in board.walls and \
-                    (char not in board.doors or char not in state.doors):
-                new_robots = state.robots[:robot_index] + (new_loc,) + state.robots[robot_index + 1:]
-                if char in board.keys and char in state.keys:
-                    new_keys = state.keys - frozenset(char)
-                    new_doors = state.doors - frozenset(char.upper())
-                    new_collected = state.collected + (char,)
-                    new_steps = state.steps + steps + 1
-                    new_state = State(new_robots, new_keys, new_doors, new_steps, new_collected)
-                    res.append(new_state)
-                else:
-                    queue.append((new_loc, steps + 1))
+@dataclass(frozen=True)
+class Edge(object):
+    key: str
+    doors: FrozenSet[str] = frozenset()
+    steps: int = 0
 
-            seen.add(new_loc)
-    return res
+
+def to_graphs(board: Board) -> List[Dict[str, List[Edge]]]:
+    def to_graph_from(start: str, loc: Tuple[int, int]):
+        res = defaultdict(list)
+        queue = deque([(start, loc, (), 0)])
+        seen = set()
+        while len(queue) > 0:
+            sym, loc, doors, steps = queue.popleft()
+            seen.add((sym, loc))
+
+            r, c = loc
+            for new_loc in [(r - 1, c), (r + 1, c), (r, c - 1), (r, c + 1)]:
+                if (sym, new_loc) in seen or not board.on_board(new_loc):
+                    continue
+
+                new_sym = board.mat[new_loc[0]][new_loc[1]]
+                if new_sym == '#':
+                    continue
+                else:
+                    if sym != new_sym and new_sym in board.keys:
+                        edge = Edge(new_sym, frozenset(doors), steps + 1)
+                        res[sym].append(edge)
+
+                        if new_sym not in res:
+                            queue.append((new_sym, new_loc, (), 0))
+
+                    if new_sym in board.doors:
+                        doors = doors + (new_sym,)
+                    queue.append((sym, new_loc, doors, steps + 1))
+
+        return res
+
+    return [to_graph_from('@', board.start[i]) for i in range(len(board.start))]
+
+
+@dataclass(frozen=True)
+class State:
+    robots: Tuple[str, ...]
+    collected: FrozenSet[str] = frozenset()
+    steps: int = 0
+
+    @property
+    def key(self):
+        return self.robots, self.collected
 
 
 def shortest_path(board: Board) -> State:
-    queue = deque([board.initial_state])
+    graphs = to_graphs(board)
+    initial_state = State(tuple(['@'] * len(board.start)))
+    queue = deque([initial_state])
     seen = {}
     best = None
 
     while len(queue) > 0:
         state = queue.popleft()
-        if seen.get(state.path_key(), 1e100) <= state.steps:
-            continue
-        else:
-            seen[state.path_key()] = state.steps
+        key = state.key
+        if seen.get(key, 1e100) > state.steps:
+            seen[key] = state.steps
 
-        if len(state.keys) == 0:
-            if best is None or state.steps < best.steps:
-                best = state
-        elif best is None or state.steps < best.steps:
-            for robot_index in range(len(state.robots)):
-                new_states = next_states(board, state, robot_index)
-                for s in new_states:
-                    queue.append(s)
+            if len(state.collected) == len(board.keys):
+                if best is None or state.steps < best.steps:
+                    best = state
+            elif best is None or state.steps < best.steps:
+                for i, node in enumerate(state.robots):
+                    for edge in graphs[i][node]:
+                        if edge.key not in state.collected and all(d.lower() in state.collected for d in edge.doors):
+                            new_robots = state.robots[:i] + (edge.key,) + state.robots[i + 1:]
+                            new_collected = state.collected | {edge.key}
+                            new_steps = state.steps + edge.steps
+                            new_state = State(new_robots, new_collected, new_steps)
+                            queue.append(new_state)
 
     return best
 
@@ -129,5 +147,5 @@ def problem2():
 
 
 if __name__ == '__main__':
-    # print(problem1())
-    print(problem2())
+    print(problem1())
+    # print(problem2())
