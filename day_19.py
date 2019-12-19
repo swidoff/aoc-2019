@@ -49,6 +49,9 @@ def find_square_in_beam(program, dim) -> Tuple[int, int]:
     """
     Returns the x,y coordinates of the upper left corner of the dim x dim square contained entirely in the
     beam that has the lowest x value (closest to the emitter at x=0).
+
+    Could use a binary search to locate the x coord rather than a linear search. We kind of know the slope
+    of the upper vector of the beam, so could use that to pick a reasonable place to start looking for y.
     """
     x = 3
     y = 4
