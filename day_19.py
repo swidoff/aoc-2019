@@ -56,7 +56,7 @@ def find_square_in_beam(program, dim):
             y += 1
 
         coords[x].append(y)
-        y += max(coords[x-1][1] - coords[x-1][0], 1) if len(coords) > 1 else 1
+        y += max(coords[x - 1][1] - coords[x - 1][0], 1) if len(coords) > 1 else 1
         while is_point_in_beam(program, x, y):
             y += 1
 
@@ -69,7 +69,7 @@ def find_square_in_beam(program, dim):
 def problem2():
     program = list(program_in_file('day_19_input.txt'))
     x, y = find_square_in_beam(program, 100)
-    #4: 26 35
+    # 4: 26 35
     print(x, y)
     return x * 10000 + y
 
