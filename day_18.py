@@ -1,4 +1,4 @@
-from collections import deque, defaultdict
+from collections import deque, defaultdict, namedtuple
 from dataclasses import dataclass, field
 from typing import List, Tuple, Set, Dict, FrozenSet
 import heapq
@@ -70,27 +70,21 @@ def to_graphs(board: Board) -> List[Dict[str, List[Edge]]]:
     return [to_graph_from('@', board.start[i]) for i in range(len(board.start))]
 
 
-@dataclass(frozen=True)
-class State:
-    robots: Tuple[str, ...]
-    collected: FrozenSet[str] = frozenset()
-    steps: int = 0
-
-    @property
-    def key(self):
-        return self.robots, self.collected
+State = namedtuple("State", ["steps", "robots", "collected"])
 
 
 def shortest_path(board: Board) -> State:
     graphs = to_graphs(board)
-    initial_state = State(tuple(['@'] * len(board.start)))
-    queue = deque([initial_state])
+    initial_state = State(0, tuple(['@'] * len(board.start)), frozenset())
+    queue = []
+    heapq.heappush(queue, initial_state)
+
     seen = {}
     best = None
 
     while len(queue) > 0:
-        state = queue.popleft()
-        key = state.key
+        state = heapq.heappop(queue)
+        key = (state.robots, state.collected)
         if seen.get(key, 1e100) > state.steps:
             seen[key] = state.steps
 
@@ -104,8 +98,8 @@ def shortest_path(board: Board) -> State:
                             new_robots = state.robots[:i] + (edge.key,) + state.robots[i + 1:]
                             new_collected = state.collected | {edge.key}
                             new_steps = state.steps + edge.steps
-                            new_state = State(new_robots, new_collected, new_steps)
-                            queue.append(new_state)
+                            new_state = State(new_steps, new_robots, new_collected)
+                            heapq.heappush(queue, new_state)
 
     return best
 
@@ -147,5 +141,5 @@ def problem2():
 
 
 if __name__ == '__main__':
-    # print(problem1())
+    print(problem1())
     print(problem2())
