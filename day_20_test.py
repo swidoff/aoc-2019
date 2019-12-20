@@ -1,5 +1,4 @@
-from day_20 import donut_to_graph_portals, shortest_path_steps, donut_to_graphs_recursive, compose_graphs, \
-    shortest_path_steps_recursive
+from day_20 import shortest_path_steps_recursive, shortest_path_steps_portals
 
 
 def test_donut_to_graph():
@@ -24,7 +23,7 @@ FG..#########.....#
              Z       
              Z       
 """
-    assert (shortest_path_steps(donut_to_graph_portals(img[1:-1])) == 23)
+    assert (shortest_path_steps_portals(img[1:-1]) == 23)
 
     img = """
                    A               
@@ -65,7 +64,7 @@ YN......#               VT..#....QG
            B   J   C               
            U   P   P               
 """
-    assert (shortest_path_steps(donut_to_graph_portals(img[1:-1])) == 58)
+    assert (shortest_path_steps_portals(img[1:-1]) == 58)
 
 
 def test_donut_to_graph_recursive():
@@ -108,6 +107,4 @@ RE....#.#                           #......RF
                A O F   N                     
                A A D   M                     
 """
-    outer_graph, inner_graph = donut_to_graphs_recursive(img[1:-1])
-    graph = compose_graphs(outer_graph, inner_graph, 11)
-    assert (shortest_path_steps_recursive(graph) == 396)
+    assert (shortest_path_steps_recursive(img[1:-1]) == 396)
