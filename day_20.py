@@ -20,7 +20,7 @@ def donut_to_graph(donut: str) -> Graph:
 def create_graph(mat: List[str], nodes: Dict[Tuple[int, int], str]) -> Graph:
     """
     Given the locations of the nodes on the maps, create a graph with edges between doors that have a path between
-    them labled with the distance in steps.
+    them labeled with the distance in steps.
     """
     graph = Graph()
     for loc, node in nodes.items():
