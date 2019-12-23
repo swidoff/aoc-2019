@@ -69,41 +69,36 @@ def simulate_network_with_nat(program: List[int]):
             else:
                 queues[dest].append((x, y))
 
-    computers = []
-    for i in range(50):
+    def new_computer(i):
         r = router()
         next(r)
-
         computer = run_program_coroutine(list(program), r)
         next(computer)
         computer.send(i)
-        computers.append(computer)
+        return computer
+
+    computers = [new_computer(i) for i in range(50)]
 
     try:
-        idle_count = 0
         while not res:
             for i, comp in enumerate(computers):
                 q = queues[i]
                 if q:
                     while q:
-                        x, y, = q.popleft()
+                        x, y = q.popleft()
                         comp.send(x)
                         comp.send(y)
                 else:
                     comp.send(-1)
 
-            idle_count = 0 if any(q for q in queues) else idle_count + 1
-
-            if idle_count > 1:
-                if last_nat and last_nat[1] == nat[0][1]:
+            if not any(queues):
+                x, y = nat[0]
+                if last_nat and last_nat[1] == y:
                     res = nat
-                    break
                 else:
-                    x, y = nat[0]
                     last_nat = (x, y)
                     computers[0].send(x)
                     computers[0].send(y)
-
     except StopIteration:
         pass
 
