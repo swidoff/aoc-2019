@@ -121,12 +121,7 @@ def recursive_step(grids: List[Grid]) -> List[Grid]:
 
 
 def recursive_count_bugs(grids: List[Grid]):
-    count = 0
-    for g in grids:
-        for r in range(len(g)):
-            for c in range(len(g[r])):
-                count += g[r][c]
-    return count
+    return sum(sum(sum(row) for row in grid) for grid in grids)
 
 
 def recursive_step_level(grid: Grid, below: Optional[Grid] = None, above: Optional[Grid] = None) -> Grid:
