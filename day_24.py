@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-from collections import deque
-from dataclasses import dataclass
 from functools import reduce
-from typing import List, Optional, Tuple
+from typing import List, Optional
 
 
 class BugGrid(object):
@@ -86,23 +84,23 @@ def problem1():
     return grid.first_repeated_bits(start_bits, verbose=False)
 
 
-Grid = List[List[str]]
+Grid = List[List[bool]]
 
 
 def empty_grid() -> Grid:
-    return [['.', '.', '.', '.', '.'],
-            ['.', '.', '.', '.', '.'],
-            ['.', '.', '.', '.', '.'],
-            ['.', '.', '.', '.', '.'],
-            ['.', '.', '.', '.', '.']]
+    return [[False, False, False, False, False],
+            [False, False, False, False, False],
+            [False, False, False, False, False],
+            [False, False, False, False, False],
+            [False, False, False, False, False]]
 
 
 def initial_grid(grid: str) -> Grid:
-    return [list(line) for line in grid.split('\n')]
+    return [list(c == "#" for c in line) for line in grid.split('\n')]
 
 
 def grid_to_str(grid: Grid) -> str:
-    return '\n'.join(''.join(row) for row in grid)
+    return '\n'.join(''.join("#" if c else '.' for c in row) for row in grid)
 
 
 def recursive_steps(grid: Grid, steps: int) -> List[Grid]:
@@ -127,32 +125,25 @@ def recursive_count_bugs(grids: List[Grid]):
     for g in grids:
         for r in range(len(g)):
             for c in range(len(g[r])):
-                if g[r][c] == '#':
-                    count += 1
+                count += g[r][c]
     return count
 
 
-def recursive_step_level(grid: List[List[str]] = None,
-                         below: Optional[List[List[str]]] = None,
-                         above: Optional[List[List[str]]] = None) -> List[List[str]]:
-    if grid is None:
-        grid = [['.'] * 5] * 5
-
-    res = [['.' for c in range(5)] for r in range(5)]
+def recursive_step_level(grid: Grid, below: Optional[Grid] = None, above: Optional[Grid] = None) -> Grid:
+    res = empty_grid()
 
     for r in range(5):
         for c in range(5):
             if r == 2 and c == 2:
                 continue
 
-            val = grid[r][c]
-            adjacent = recursive_find_adjacent(r, c, grid, below, above)
-            bug_count = sum(1 if g[r][c] == '#' else 0 for g, r, c in adjacent)
+            bug_count = recursive_adjacent_bugs(r, c, grid, below, above)
 
-            if val == '#' and bug_count != 1:
-                new_val = '.'
-            elif val == '.' and 1 <= bug_count <= 2:
-                new_val = '#'
+            val = grid[r][c]
+            if val and bug_count != 1:
+                new_val = 0
+            elif not val and 1 <= bug_count <= 2:
+                new_val = 1
             else:
                 new_val = val
 
@@ -161,38 +152,35 @@ def recursive_step_level(grid: List[List[str]] = None,
     return res
 
 
-def recursive_find_adjacent(r: int, c: int,
-                            grid: Grid,
-                            below: Optional[Grid],
-                            above: Optional[Grid]) -> List[Tuple[Grid, int, int]]:
-    res = []
+def recursive_adjacent_bugs(r: int, c: int, grid: Grid, below: Optional[Grid], above: Optional[Grid]) -> int:
+    res = 0
     if above:
         if r == 0:
-            res.append((above, 1, 2))
+            res += above[1][2]
+        elif r == 4:
+            res += above[3][2]
         if c == 0:
-            res.append((above, 2, 1))
-        if r == 4:
-            res.append((above, 3, 2))
-        if c == 4:
-            res.append((above, 2, 3))
+            res += above[2][1]
+        elif c == 4:
+            res += above[2][3]
     if below:
         if r == 1 and c == 2:
-            res.extend((below, 0, i) for i in range(5))
-        if r == 2 and c == 1:
-            res.extend((below, i, 0) for i in range(5))
-        if r == 3 and c == 2:
-            res.extend((below, 4, i) for i in range(5))
-        if r == 2 and c == 3:
-            res.extend((below, i, 4) for i in range(5))
+            res += sum(below[0][i] for i in range(5))
+        elif r == 2 and c == 1:
+            res += sum(below[i][0] for i in range(5))
+        elif r == 3 and c == 2:
+            res += sum(below[4][i] for i in range(5))
+        elif r == 2 and c == 3:
+            res += sum(below[i][4] for i in range(5))
 
     if r - 1 >= 0:
-        res.append((grid, r - 1, c))
+        res += grid[r - 1][c]
     if r + 1 <= 4:
-        res.append((grid, r + 1, c))
+        res += grid[r + 1][c]
     if c - 1 >= 0:
-        res.append((grid, r, c - 1))
+        res += grid[r][c - 1]
     if c + 1 <= 4:
-        res.append((grid, r, c + 1))
+        res += grid[r][c + 1]
 
     return res
 
