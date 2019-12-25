@@ -30,11 +30,11 @@ def play_zork(program: List[int], script: List[str] = None):
             computer.send(ord(c))
         computer.send(ord('\n'))
 
-    if script:
-        for command in script:
-            send_command(command)
-
     try:
+        if script:
+            for command in script:
+                send_command(command)
+
         while True:
             command = input()
             send_command(command)
