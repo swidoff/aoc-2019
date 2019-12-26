@@ -8,6 +8,8 @@ pytest = "*"
 
 [packages]
 networkx = "*"
+segment_tree = "*"
+toolz = "*"
 
 [requires]
 python_version = "3.7"
